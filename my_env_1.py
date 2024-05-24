@@ -73,14 +73,18 @@ class PadmEnv(gym.Env):
     def step(self, action):
         self.env_is_visible += 1 if self.env_is_visible<=0 else 0
         next_state = self.agent_state.copy()
-        if action == "w" or action == "W" and self.agent_state[1] < self.grid_size - 1:  # up
-            next_state[1] += 1
-        elif action == "s" or action == "S" and self.agent_state[1] > 0:  # down
-            next_state[1] -= 1
-        elif action == "a" or action == "A" and self.agent_state[0] > 0:  # left
-            next_state[0] -= 1
-        elif action == "d" or action == "D" and self.agent_state[0] < self.grid_size - 1:  # right
-            next_state[0] += 1
+        if action == "w" or action == "W":
+            if self.agent_state[1] < self.grid_size - 1:  # up
+                next_state[1] += 1
+        elif action == "s" or action == "S":
+            if self.agent_state[1] > 0:  # down
+                next_state[1] -= 1
+        elif action == "a" or action == "A":
+            if self.agent_state[0] > 0:  # left
+                next_state[0] -= 1
+        elif action == "d" or action == "D":
+            if self.agent_state[0] < self.grid_size - 1:  # right
+                next_state[0] += 1
 
         if not any(np.array_equal(next_state, obs) for obs in self.obstacles):
             self.agent_state = next_state
