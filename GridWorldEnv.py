@@ -13,6 +13,9 @@ import keyboard
 
 
 class StateType(Enum):
+    """
+    Represents different state types in the environment.
+    """
     HELL = 'hell'
     PATH = 'path'
     OBSTACLE = 'obstacle'
@@ -21,6 +24,9 @@ class StateType(Enum):
 
 
 class SpecialAbilities(Enum):
+    """
+    Enumerates special abilities available to certain states.
+    """
     RESET = "reset"
     FLY = "fly"
     CATCH_ANY_POKEMON = "catch_em_all"
@@ -28,6 +34,9 @@ class SpecialAbilities(Enum):
 
 
 class ExtendedStateType(Enum):
+    """
+    Represents extended state types with additional properties like rewards, images, and special abilities.
+    """
     PATH_SANDY_1 = (StateType.PATH, [0], "free-path-1.png", None)
     PATH_SANDY_2 = (StateType.PATH, [0], "free-path-2.png", None)
     PATH_GRASSY_1 = (StateType.PATH, [0], "free-path.png", None)
@@ -61,7 +70,7 @@ class ExtendedStateType(Enum):
     GOAL = (StateType.GOAL, [100], "pikachu.gif", None)
 
     def __new__(cls, state_type: StateType, rewards: List[int], image: str, special_ability: Optional[SpecialAbilities]):
-        obj = object.__new__(cls)  # cls refers to the ExtendedStateType class
+        obj = object.__new__(cls)
         obj._value_ = (state_type, rewards, image, special_ability)
         obj.state_type = state_type
         obj.rewards = rewards
@@ -71,13 +80,20 @@ class ExtendedStateType(Enum):
 
 
 class State:
+    """
+    Represents a state in the Grid environment with its type and associated properties.
+    """
+
     def __init__(self, state_type: ExtendedStateType):
         self.state_type = state_type
 
-    def __repr__(self):
-        return f"State({self.state_type}, Reward: {self.state_type.rewards}, Image: {self.state_type.image_location}, Special Damage: {self.state_type.special_ability})"
-
     def _get_state_info(self):
+        """
+        Retrieves information about the state.
+
+        Returns:
+            tuple: Contains state type, rewards, image location, and special ability.
+        """
         return (
             self.state_type,
             self.state_type.rewards,
@@ -88,19 +104,19 @@ class State:
 
 class GridWorldEnv(gym.Env):
     """
-    A class representing a simple UNDETERMINISTIC agent environment which is
+    A class representing a simple DETERMINISTIC agent environment (which is
     extensible to create non-determinisim by giving certain abilities to
-    the hell_states.
+    the hell_states)
 
     Attributes:
         grid_size (int): The size of the grid for the environment.
+        FREE_PASS_ONCE (bool): Flag denoting if agent is impervious to damage by any hellstate(Pokemon) until it captures one.
         agent_state (numpy.ndarray): The current state of the agent as coordinates [x, y].
         goal_state (numpy.ndarray): The coordinates [x, y] of the goal state.
         current_cumulative_reward (int): The current reward accumulated in a single step.
         total_reward (int): The total reward accumulated across all steps.
         goal_reached (bool): A flag indicating if the goal has been reached.
         action_space (gym.spaces.Discrete): The action space of the environment.
-        observation_space (gym.spaces.Dict): The observation space of the environment.
         current_frame (int): The current frame number for animation purposes.
         ax (matplotlib.axes.Axes): The axes object for rendering.
         obstacles (list): A list of coordinates for obstacles.
@@ -123,7 +139,7 @@ class GridWorldEnv(gym.Env):
         """
         super().__init__()
         # Initialize a 11x11 grid with ExtendedStateType.PATH_GRASSY_1 as default state
-        self.grid = self.__create_grid(
+        self.grid = self._create_grid(
             grid_size, grid_size, ExtendedStateType.PATH_GRASSY_1)
 
         # Matrix (position based) Map of the environment (NOT based on Rendering point of view !).
@@ -154,7 +170,7 @@ class GridWorldEnv(gym.Env):
 
         for i in range(grid_size):
             for j in range(grid_size):
-                self.__set_state(
+                self._set_state(
                     j, i, self._get_enum_from_string(grid_map[i][j]))
 
         self.grid_size = grid_size
@@ -164,36 +180,68 @@ class GridWorldEnv(gym.Env):
         self.current_cumulative_reward = 0
         self.total_reward = 0
         self.goal_reached = False
-        self.action_space = gym.spaces.Discrete(4)
-        self.observation_space = gym.spaces.Dict(
-            {
-                "agent": gym.spaces.Box(0, self.grid_size - 1, shape=(2,), dtype=int),
-                "target": gym.spaces.Box(0, self.grid_size - 1, shape=(2,), dtype=int),
-            }
-        )
+        self.action_space = gym.spaces.Discrete(8)
+        self.action_mapping = {
+            0: 'a',  # Move left
+            1: 'A',  # Move left (capitalized)
+            2: 's',  # Move down
+            3: 'S',  # Move down (capitalized)
+            4: 'd',  # Move right
+            5: 'D',  # Move right (capitalized)
+            6: 'w',  # Move up
+            7: 'W',  # Move up (capitalized)
+        }
 
         self.current_frame = 0
         _, self.ax = plt.subplots()
-        self.__load_images()
+        self._load_images()
         self.obstacles = self._generate_obstacles_list()
         self.hell_states = self._generate_hell_states_list()
         self.helper_states = self._generate_helper_states_list()
-        self.walkable_states = self.generate_background()
+        self.walkable_states = self._generate_background()
         self.within_danger_zones = []
         plt.show(block=False)
 
-    def __create_grid(self, rows, cols, default_state_type):
+    def _create_grid(self, rows, cols, default_state_type):
+        """
+        Create a (grid_size x grid_size) dimension grid with the default_state_type
+
+        Parameters:
+            rows (int): The number of rows the grid should have.
+            cols (int): The number of columns the grid should have.
+            default_state_type (ExtendedStateType): the StateType to set to all the states by default.
+
+        """
         return [[State(default_state_type) for _ in range(cols)] for _ in range(rows)]
 
-    def __set_state(self, row, col, state_type):
+    def _set_state(self, row, col, state_type):
+        """
+        Set the state at a particular grid position to a certain StateType (ExtendedStateType).
+
+        Parameters:
+            row (int): The row index of the grid cell to reset.
+            col (int): The column index of the grid cell to reset.
+            state_type (ExtendedStateType): the StateType to set to the state
+        """
         self.grid[row][col] = State(state_type)
 
     def _reset_state_to_normal(self, row, col):
+        """
+        Reset the state of a grid cell to the normal grassy path state.
+
+        This method sets the state of the specified grid cell to a normal grassy path state
+        (ExtendedStateType.PATH_GRASSY_1) and updates the lists of hell states and helper states
+        accordingly.
+
+        Parameters:
+            row (int): The row index of the grid cell to reset.
+            col (int): The column index of the grid cell to reset.
+        """
         self.grid[row][col] = State(ExtendedStateType.PATH_GRASSY_1)
         self.hell_states = self._generate_hell_states_list()
         self.helper_states = self._generate_helper_states_list()
 
-    def __load_images(self):
+    def _load_images(self):
         """
         Load images for the agent, goal, and other elements of the environment.
         """
@@ -225,8 +273,7 @@ class GridWorldEnv(gym.Env):
         """
         return img_frames[self.current_frame % len(img_frames)]
 
-    @staticmethod
-    def _degree_of_effective_zone(point1, point2):
+    def _degree_of_effective_zone(self, point1, point2):
         """
         Calculate the distance of the surrounding single-cell-thick box (on which point1 lies), 
         from the center (point2) which it surrounds.
@@ -320,7 +367,7 @@ class GridWorldEnv(gym.Env):
                         ([i, j], filename, frames, rewards, special_ability))
         return helper_states
 
-    def generate_background(self):
+    def _generate_background(self):
         walkable_states = []
         for i in range(self.grid_size):
             for j in range(self.grid_size):
@@ -352,7 +399,7 @@ class GridWorldEnv(gym.Env):
 
     def _render_obstacles(self):
         """
-        Render image of the obstacle if environment is visible.
+        Render image of the obstacle.
         """
         for obs in self.obstacles:
             obs_pos = [x + 0.5 for x in obs[0]]
@@ -364,7 +411,7 @@ class GridWorldEnv(gym.Env):
 
     def _render_hell_states(self):
         """
-        Render image of the hell_state if environment is visible.
+        Render image of the hell_state.
         """
         for pos, _, hell_frames, _, _ in self.hell_states:
             hell_pos = [x + 0.5 for x in pos]
@@ -373,7 +420,7 @@ class GridWorldEnv(gym.Env):
 
     def _render_helper_states(self):
         """
-        Render image of the helper_state if environment is visible.
+        Render image of the helper_state.
         """
         for pos, _, helper_frames, _, _ in self.helper_states:
             helper_pos = [x + 0.5 for x in pos]
@@ -382,7 +429,7 @@ class GridWorldEnv(gym.Env):
 
     def _render_walkable_states(self):
         """
-        Render image of the walkable_states if environment is visible.
+        Render image of the walkable_states.
         """
         for pos, filename, _, _, _ in self.walkable_states:
             self.walkable_path = os.path.join(
@@ -622,23 +669,27 @@ class GridWorldEnv(gym.Env):
                     - "distance" (float): The Manhattan distance (L1 norm) between the agent's 
                     current position and the goal state.
         """
-        next_state = self.agent_state.copy()
 
-        if action in ["w", "W"]:
-            if self.agent_state[1] < self.grid_size - 1:  # up
-                next_state[1] += 1
-        elif action in ["s", "S"]:
-            if self.agent_state[1] > 0:  # down
-                next_state[1] -= 1
-        elif action in ["a", "A"]:
-            if self.agent_state[0] > 0:  # left
-                next_state[0] -= 1
-        elif action in ["d", "D"]:
-            if self.agent_state[0] < self.grid_size - 1:  # right
-                next_state[0] += 1
+        if action in self.action_mapping.values():
+            next_state = self.agent_state.copy()
 
-        if not any(np.array_equal(next_state, obs[0]) for obs in self.obstacles):
-            self.agent_state = next_state
+            if action in ["w", "W"]:
+                if self.agent_state[1] < self.grid_size - 1:  # up
+                    next_state[1] += 1
+            elif action in ["s", "S"]:
+                if self.agent_state[1] > 0:  # down
+                    next_state[1] -= 1
+            elif action in ["a", "A"]:
+                if self.agent_state[0] > 0:  # left
+                    next_state[0] -= 1
+            elif action in ["d", "D"]:
+                if self.agent_state[0] < self.grid_size - 1:  # right
+                    next_state[0] += 1
+
+            if not any(np.array_equal(next_state, obs[0]) for obs in self.obstacles):
+                self.agent_state = next_state
+        else:
+            raise ValueError(f"Invalid action: {action}")
 
         reward = 0
         done = np.array_equal(self.agent_state, self.goal_state)
@@ -675,12 +726,14 @@ class GridWorldEnv(gym.Env):
                     if reward < 0:
                         if (self.FREE_PASS_ONCE):
                             reward = 0
-                            # self._set_state_to_normal(pos[0], pos[1])
                         else:
-                            # Populate active danger_zones list with (distance_from_hell_state, filename, pos) - useful for marking them when rendering.
+                            # Populate active danger_zones list with (distance_from_hell_state, filename, pos) 
+                            # - useful for marking them when rendering.
                             self.within_danger_zones.append(
                                 (distance_from_hell_state, filename, pos))
-                        if distance_from_hell_state == 0:  # Reset FREE_PASS_ONCE to False.
+                        # Reset FREE_PASS_ONCE to False upon reaching a hellstate (Pokemon)
+                        # and capturing it (effectively reseting the state to a default state).
+                        if distance_from_hell_state == 0:
                             if (self.FREE_PASS_ONCE):
                                 self._reset_state_to_normal(pos[0], pos[1])
                                 self._render_hell_states()
@@ -714,7 +767,6 @@ class GridWorldEnv(gym.Env):
             plt.pause(0.7)
         else:
             self._draw_grid()
-            # self._render_walkable_cells()
             self._render_walkable_states()
             self._render_goal()
             self._draw_cage_in_goal()
@@ -749,21 +801,18 @@ if __name__ == "__main__":
             env.render()
             action = input("Enter action (w=up, s=down, a=left, d=right): ")
             try:
-                if action in ["a", "s", "d", "w", "A", "S", "D", "W"]:
-                    observation, reward, done, info = env.step(action)
-                    print(f"Observation: {observation}, Reward: {
-                          reward}, Done: {done}, Info: {info}")
-                    if done:
-                        print("Agent reached the Goal!")
-                        print(f"Total Reward = {env.total_reward}")
-                        env.render()
-                        print("Press Enter to close the window")
-                        while True:
-                            if keyboard.is_pressed("enter"):
-                                env.close()
-                                break
-                else:
-                    raise ValueError
+                observation, reward, done, info = env.step(action)
+                print(f"Observation: {observation}, Reward: {
+                    reward}, Done: {done}, Info: {info}")
+                if done:
+                    print("Agent reached the Goal!")
+                    print(f"Total Reward = {env.total_reward}")
+                    env.render()
+                    print("Press Enter to close the window")
+                    while True:
+                        if keyboard.is_pressed("enter"):
+                            env.close()
+                            break
             except ValueError:
                 print("Invalid input. Please enter a valid action.")
     except KeyboardInterrupt:
