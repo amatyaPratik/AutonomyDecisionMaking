@@ -106,7 +106,6 @@ class GridWorldEnv(gym.Env):
         obstacles (list): A list of coordinates for obstacles.
         hell_states (list): A list of tuples containing coordinates, filenames, frames, rewards & special_damages for hell states.
         within_danger_zones (list): A list of tuples indicating danger zones affecting the agent.
-        env_is_visible (int): A flag controlling the visibility of the environment elements.
         agent_frames (list): Frames for the agent's animation.
         goal_frames (list): Frames for the goal's animation.
         goal_reached_frames (list): Frames for the goal reached animation.
@@ -175,13 +174,12 @@ class GridWorldEnv(gym.Env):
 
         self.current_frame = 0
         _, self.ax = plt.subplots()
-        # self.__load_images()
+        self.__load_images()
         self.obstacles = self._generate_obstacles_list()
         self.hell_states = self._generate_hell_states_list()
         self.helper_states = self._generate_helper_states_list()
         self.walkable_states = self.generate_background()
         self.within_danger_zones = []
-        self.env_is_visible = 1
         plt.show(block=False)
 
     def __create_grid(self, rows, cols, default_state_type):
@@ -362,8 +360,7 @@ class GridWorldEnv(gym.Env):
                 '.', 'pokemon', 'sprites', obs[1]
             )
             obs_image = mpimg.imread(obstacle_path)
-            if self.env_is_visible > 0:
-                self._display_image(obs_image, obs_pos)
+            self._display_image(obs_image, obs_pos)
 
     def _render_hell_states(self):
         """
@@ -372,8 +369,7 @@ class GridWorldEnv(gym.Env):
         for pos, _, hell_frames, _, _ in self.hell_states:
             hell_pos = [x + 0.5 for x in pos]
             hell_frame = self._get_current_image_frame(hell_frames)
-            if self.env_is_visible > 0:
-                self._display_image(hell_frame, hell_pos)
+            self._display_image(hell_frame, hell_pos)
 
     def _render_helper_states(self):
         """
@@ -382,8 +378,7 @@ class GridWorldEnv(gym.Env):
         for pos, _, helper_frames, _, _ in self.helper_states:
             helper_pos = [x + 0.5 for x in pos]
             helper_frames = self._get_current_image_frame(helper_frames)
-            if self.env_is_visible > 0:
-                self._display_image(helper_frames, helper_pos)
+            self._display_image(helper_frames, helper_pos)
 
     def _render_walkable_states(self):
         """
@@ -395,8 +390,7 @@ class GridWorldEnv(gym.Env):
             )
             # Image for walkable path.
             walkable_image = mpimg.imread(self.walkable_path)
-            if self.env_is_visible > 0:
-                self._display_image(walkable_image, [pos[0], pos[1]], True)
+            self._display_image(walkable_image, [pos[0], pos[1]], True)
 
     def _render_agent(self):
         """
@@ -628,7 +622,6 @@ class GridWorldEnv(gym.Env):
                     - "distance" (float): The Manhattan distance (L1 norm) between the agent's 
                     current position and the goal state.
         """
-        self.env_is_visible += 1 if self.env_is_visible <= 0 else 0
         next_state = self.agent_state.copy()
 
         if action in ["w", "W"]:
@@ -721,21 +714,19 @@ class GridWorldEnv(gym.Env):
             plt.pause(0.7)
         else:
             self._draw_grid()
-            # Check if environment is visible.
-            if self.env_is_visible > 0:
-                # self._render_walkable_cells()
-                self._render_walkable_states()
-                self._render_goal()
-                self._draw_cage_in_goal()
-                self._render_obstacles()
-                self._render_hell_states()
-                self._render_helper_states()
-                # Display the image of the agent first and then pain indicator on top if any
-                self._render_agent()
-                if self.within_danger_zones:
-                    for distance_from_danger, _, pos in self.within_danger_zones:
-                        self._mark_danger_zone(
-                            pos, distance_from_danger, self.agent_state)
+            # self._render_walkable_cells()
+            self._render_walkable_states()
+            self._render_goal()
+            self._draw_cage_in_goal()
+            self._render_obstacles()
+            self._render_hell_states()
+            self._render_helper_states()
+            # Display the image of the agent first and then pain indicator on top if any
+            self._render_agent()
+            if self.within_danger_zones:
+                for distance_from_danger, _, pos in self.within_danger_zones:
+                    self._mark_danger_zone(
+                        pos, distance_from_danger, self.agent_state)
 
             self._set_grid_dimensions()
             # Increment the current_frame for all animated GIF images.
