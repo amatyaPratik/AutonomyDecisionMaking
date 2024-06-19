@@ -378,8 +378,7 @@ class GridWorldEnv(gym.Env):
                     filename = state_info[2]
                     special_ability = state_info[3]
                     rewards = state_info[1]
-                    frames = imageio.mimread(os.path.join(
-                        '.', 'pokemon', 'sprites', state_info[2]))
+                    frames = []
                     walkable_states.append(
                         ([i, j], filename, frames, rewards, special_ability))
                 elif (state_info[0].value[0] in [StateType.HELL, StateType.OBSTACLE, StateType.HELPER]):
@@ -388,6 +387,36 @@ class GridWorldEnv(gym.Env):
                     walkable_states.append(
                         ([i, j], filename, frames, rewards, special_ability))
         return walkable_states
+
+    def _render_state(self, pos):
+        """
+        Render the state & its image centered within the cell.
+        """
+        state = self.grid[pos[0]][pos[1]]
+        state_info = state._get_state_info()
+        render_pos = None
+        img_frame = None
+        display_in_center = False
+        filename = state_info[2]
+        # Access the StateType of the ExtendedStateType of the State
+        if (state_info[0].value[0] in [StateType.PATH, StateType.OBSTACLE]):
+            render_pos = pos
+            img_path = os.path.join(
+                '.', 'pokemon', 'sprites', filename
+            )
+            # Image for walkable path.
+            img_frame = mpimg.imread(img_path)
+            if state_info[0].value[0] == StateType.OBSTACLE:
+                display_in_center = True
+            if state_info[0].value[0] == StateType.PATH:
+                display_in_center = True
+        elif (state_info[0].value[0] in [StateType.HELL, StateType.HELPER, StateType.GOAL]):
+            frames = imageio.mimread(os.path.join(
+                '.', 'pokemon', 'characters', filename))
+            render_pos = [p + 0.5 for p in pos]
+            img_frame = self._get_current_image_frame(frames)
+
+        self._display_image(img_frame, render_pos, display_in_center)
 
     def _render_goal(self):
         """
@@ -727,7 +756,7 @@ class GridWorldEnv(gym.Env):
                         if (self.FREE_PASS_ONCE):
                             reward = 0
                         else:
-                            # Populate active danger_zones list with (distance_from_hell_state, filename, pos) 
+                            # Populate active danger_zones list with (distance_from_hell_state, filename, pos)
                             # - useful for marking them when rendering.
                             self.within_danger_zones.append(
                                 (distance_from_hell_state, filename, pos))
@@ -767,12 +796,16 @@ class GridWorldEnv(gym.Env):
             plt.pause(0.7)
         else:
             self._draw_grid()
-            self._render_walkable_states()
-            self._render_goal()
+            for i in range(self.grid_size):
+                for j in range(self.grid_size):
+                    self._render_state([i, j])
+            # self._render_walkable_states()
+            # self._render_goal()
             self._draw_cage_in_goal()
-            self._render_obstacles()
-            self._render_hell_states()
-            self._render_helper_states()
+
+            # self._render_obstacles()
+            # self._render_hell_states()
+            # self._render_helper_states()
             # Display the image of the agent first and then pain indicator on top if any
             self._render_agent()
             if self.within_danger_zones:
@@ -783,7 +816,7 @@ class GridWorldEnv(gym.Env):
             self._set_grid_dimensions()
             # Increment the current_frame for all animated GIF images.
             self.current_frame += 1
-        plt.pause(0.05)
+        plt.pause(0.01)
 
     def close(self):
         """
