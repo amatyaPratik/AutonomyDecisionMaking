@@ -2,6 +2,7 @@
 from enum import Enum
 import os
 from typing import List, Optional
+import random
 
 # Third-Party Imports
 import gymnasium as gym
@@ -178,19 +179,8 @@ class GridWorldEnv(gym.Env):
         self.agent_state = np.array([0, 0])
         self.goal_state = np.array([10, 10])
         self.current_cumulative_reward = 0
-        # self.total_reward = 0
         self.goal_reached = False
         self.action_space = gym.spaces.Discrete(4)
-        # self.action_mapping = {
-        #     0: 'a',  # Move left
-        #     1: 'A',  # Move left (capitalized)
-        #     2: 's',  # Move down
-        #     3: 'S',  # Move down (capitalized)
-        #     4: 'd',  # Move right
-        #     5: 'D',  # Move right (capitalized)
-        #     6: 'w',  # Move up
-        #     7: 'W',  # Move up (capitalized)
-        # }
 
         self.current_frame = 0
         _, self.ax = plt.subplots()
@@ -198,6 +188,7 @@ class GridWorldEnv(gym.Env):
         self.obstacles = self._generate_obstacles_list()
         self.hell_states = self._generate_hell_states_list()
         self.helper_states = self._generate_helper_states_list()
+        self.walkable_states_array = []
         self.walkable_states = self._generate_background()
         self.within_danger_zones = []
         plt.show(block=False)
@@ -382,6 +373,7 @@ class GridWorldEnv(gym.Env):
                         '.', 'pokemon', 'sprites', state_info[2]))
                     walkable_states.append(
                         ([i, j], filename, frames, rewards, special_ability))
+                    self.walkable_states_array.append([i, j])
                 elif (state_info[0].value[0] in [StateType.HELL, StateType.OBSTACLE, StateType.HELPER]):
                     frames = imageio.mimread(os.path.join(
                         '.', 'pokemon', 'sprites', ExtendedStateType.PATH_GRASSY_1.value[2]))
@@ -633,8 +625,8 @@ class GridWorldEnv(gym.Env):
                 - "distance" (float): The Manhattan distance (L1 norm) between 
                 the initial position of the agent and the goal state.
         """
-        # self.total_reward = 0
-        self.agent_state = np.array([0, 0])
+        self.agent_state = random.choice(np.array(self.walkable_states_array))
+
         self.goal_reached = False
         self.current_frame = 0
 
@@ -713,7 +705,6 @@ class GridWorldEnv(gym.Env):
             print("END")
             self.goal_reached = True
         self.current_cumulative_reward = reward
-        # self.total_reward += reward
 
         if not done:
             self.within_danger_zones = []
@@ -765,7 +756,6 @@ class GridWorldEnv(gym.Env):
                     pass
 
             # Add the current step's cumulative reward to global reward.
-            # self.total_reward += self.current_cumulative_reward
         observation = self._get_obs()
         info = self._get_info()
 
