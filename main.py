@@ -25,7 +25,7 @@ if train:
     # Train a Q-learning agent:
     # -------------------------
     train_q_learning(env=env,
-                     renderChoice=False,
+                     renderChoice=True,
                      no_episodes=no_episodes,
                      epsilon=epsilon,
                      epsilon_min=epsilon_min,
