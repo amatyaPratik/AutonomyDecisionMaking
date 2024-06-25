@@ -10,7 +10,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import imageio
-import keyboard
 
 
 class StateType(Enum):
@@ -806,34 +805,3 @@ def create_env():
     env = GridWorldEnv()
 
     return env
-
-
-# if __name__ == "__main__":
-#     env = GridWorldEnv()
-#     state = env.reset()
-#     done = False
-#     try:
-#         while not done:
-#             print(f"env.renderChoice: {env.renderChoice}")
-#             if env.renderChoice:
-#                 env.render()
-#             action = input("Enter action (w=up, s=down, a=left, d=right): ")
-#             try:
-#                 observation, reward, done, info = env.step(action)
-#                 print(f"Observation: {observation}, Reward: {
-#                     reward}, Done: {done}, Info: {info}")
-#                 if done:
-#                     print("Agent reached the Goal!")
-#                     print(f"Total Reward = {env.total_reward}")
-#                     env.render()
-#                     print("Press Enter to close the window")
-#                     while True:
-#                         if keyboard.is_pressed("enter"):
-#                             env.close()
-#                             break
-#             except ValueError:
-#                 print("Invalid input. Please enter a valid action.")
-#     except KeyboardInterrupt:
-#         pass
-#     finally:
-#         env.close()

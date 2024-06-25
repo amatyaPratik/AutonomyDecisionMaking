@@ -13,7 +13,7 @@ gamma = 0.99  # Discount factor
 epsilon = 1.0  # Exploration rate
 epsilon_min = 0.1  # Minimum exploration rate
 epsilon_decay = 0.995  # Decay rate for exploration
-no_episodes = 1_000  # Number of episodes
+no_episodes = 10_000  # Number of episodes
 
 # Execute:
 # --------
