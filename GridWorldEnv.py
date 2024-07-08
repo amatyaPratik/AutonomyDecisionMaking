@@ -37,18 +37,19 @@ class ExtendedStateType(Enum):
     """
     Represents extended state types with additional properties like rewards, images, and special abilities.
     """
-    PATH_SANDY_1 = (StateType.PATH, [0], "free-path-1.png", None)
-    PATH_SANDY_2 = (StateType.PATH, [0], "free-path-2.png", None)
-    PATH_GRASSY_1 = (StateType.PATH, [0], "free-path.png", None)
-    PATH_GRASSY_2 = (StateType.PATH, [0], "bush-sm.png", None)
+    PATH_SANDY_1 = (StateType.PATH, [-0.1], "free-path-1.png", None)
+    PATH_SANDY_2 = (StateType.PATH, [-0.1], "free-path-2.png", None)
+    PATH_GRASSY_1 = (StateType.PATH, [-0.1], "free-path.png", None)
+    PATH_GRASSY_2 = (StateType.PATH, [-0.1], "bush-sm.png", None)
 
-    OBSTACLE_FENCE = (StateType.OBSTACLE, [0], "fence-1.png", None)
-    OBSTACLE_SIGN_BOARD = (StateType.OBSTACLE, [0], "sign-board.png", None)
-    OBSTACLE_BUSH_BIG = (StateType.OBSTACLE, [0], "bush-lg.png", None)
-    OBSTACLE_TREE_SMALL = (StateType.OBSTACLE, [0], "obstacle-2.png", None)
-    OBSTACLE_TREE_BIG_TOP = (StateType.OBSTACLE, [0], "tree-2-top.png", None)
+    OBSTACLE_FENCE = (StateType.OBSTACLE, [-0.1], "fence-1.png", None)
+    OBSTACLE_SIGN_BOARD = (StateType.OBSTACLE, [-0.1], "sign-board.png", None)
+    OBSTACLE_BUSH_BIG = (StateType.OBSTACLE, [-0.1], "bush-lg.png", None)
+    OBSTACLE_TREE_SMALL = (StateType.OBSTACLE, [-0.1], "obstacle-2.png", None)
+    OBSTACLE_TREE_BIG_TOP = (
+        StateType.OBSTACLE, [-0.1], "tree-2-top.png", None)
     OBSTACLE_TREE_BIG_BOTTOM = (
-        StateType.OBSTACLE, [0], "tree-2-bottom.png", None)
+        StateType.OBSTACLE, [-0.1], "tree-2-bottom.png", None)
 
     HELL_STATE_CACTUS = (StateType.HELL, [-1], "cactus-2.png", None)
     HELL_STATE_WATER_LEFT = (StateType.HELL, [-1], "puddle-left.png", None)
@@ -164,8 +165,8 @@ class GridWorldEnv(gym.Env):
                 'HELL_STATE_MEWTWO', '', 'HELL_STATE_POISONOUS_FLOWER'],
             ['', '', 'OBSTACLE_TREE_SMALL', 'OBSTACLE_TREE_SMALL', '', 'OBSTACLE_BUSH_BIG', 'OBSTACLE_TREE_BIG_TOP', '',
                 'OBSTACLE_TREE_SMALL', '', ''],
-            ['', 'HELPER_STATE_MASTER_BALL', '', '',
-                'HELL_STATE_ABRA', '', '', '', '', '', 'GOAL']
+            ['', '', '', '',
+                'HELL_STATE_ABRA', '', '', 'HELPER_STATE_MASTER_BALL', '', '', 'GOAL']
         ]
 
         for i in range(grid_size):
@@ -664,6 +665,8 @@ class GridWorldEnv(gym.Env):
         """
         print(f"action1: {action}")
         print(f"curren state: {self.agent_state}")
+        agent_pos_before_transition = None
+
         if action >= 0 and action < 4:
             next_state = self.agent_state.copy()
 
@@ -715,6 +718,7 @@ class GridWorldEnv(gym.Env):
                     if special_ability == SpecialAbilities.FLY:
                         self._reset_state_to_normal(pos[0], pos[1])
                         print("Flying to [0,10]")
+                        agent_pos_before_transition = pos
                         _, _ = self.transition_directly([0, 10])
                     elif special_ability == SpecialAbilities.CATCH_ANY_POKEMON:
                         # Remove the pokeball from the Grid since it is acquired.
@@ -758,7 +762,7 @@ class GridWorldEnv(gym.Env):
         observation = self._get_obs()
         info = self._get_info()
 
-        return self.agent_state, observation, self.current_cumulative_reward, done, info
+        return (self.agent_state if agent_pos_before_transition is None else agent_pos_before_transition, observation, self.current_cumulative_reward, done, info)
 
     def render(self):
         """
