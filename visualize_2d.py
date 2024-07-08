@@ -8,7 +8,7 @@ obstacle_state_coordinates = [(0, 2), (1, 7), (1, 8), (2, 1), (2, 3), (2, 8), (2
     5, 5), (5, 6), (5, 9), (6, 2), (6, 8), (6, 9), (7, 0), (7, 5), (7, 6), (8, 0), (8, 1), (8, 5), (8, 6), (8, 9), (10, 3), (10, 4), (10, 5), (10, 6)]
 goal_coordinates = (10, 10)
 actions = ["Up", "Right", "Down", "Left"]
-q_values_path = "q_table.npy"
+q_values_path = "q_table_50_000.npy"
 
 q_table = np.load(q_values_path)
 
