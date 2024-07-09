@@ -8,7 +8,7 @@ from keras._tf_keras.keras.layers import Dense
 from keras._tf_keras.keras.layers import Flatten
 import matplotlib.pyplot as plt
 
-train_not_visualize = False
+train_not_visualize = True
 no_episodes = 10
 
 if train_not_visualize:
@@ -42,8 +42,8 @@ if train_not_visualize:
             if len(agent.memory) > batch_size:
                 agent.replay(batch_size)
         episode_rewards.append(total_reward)
-        if e % 50 == 0:
-            agent.save(f"dqn_model_{e}.weights.h5")
+        # Save model after every episode
+        agent.save(f"dqn_model_{e}.weights.h5")
     # Print average reward per episode
     average_reward = np.mean(episode_rewards)
     print(f"Average Reward per Episode: {average_reward}")
@@ -70,6 +70,7 @@ else:  # if not train_visualize:
     model.load_weights('./dqn_model_0.weights.h5')
 
     def choose_action(state):
+        print(f"state: {state}")
         q_values = model.predict(np.array([state]))[0]
         return np.argmax(q_values)  # Choose action with highest Q-value
 
