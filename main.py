@@ -1,86 +1,124 @@
+# NOTE: Code adapted from MinimalRL (URL: https://github.com/seungeunrho/minimalRL/blob/master/dqn.py)
+
 # Imports:
 # --------
-import numpy as np
-from DQNAgent import DQNAgent
-from GridWorldEnv import create_env
-from keras._tf_keras.keras import Sequential
-from keras._tf_keras.keras.layers import Dense
-from keras._tf_keras.keras.layers import Flatten
+import torch
+import gymnasium as gym
+from DQN_model import Qnet
+import torch.optim as optim
 import matplotlib.pyplot as plt
+from utils import ReplayBuffer, train
+from padm_env import create_env
+import numpy as np
 
-train_not_visualize = True
-no_episodes = 10
 
-if train_not_visualize:
-    # Create an instance of the environment:
-    # --------------------------------------
-    env = create_env()  # Replace with your environment class
-    state_size = 2  # Since the state is represented by (x, y)
-    action_size = env.action_space.n
-    agent = DQNAgent(state_size, action_size)
-    batch_size = 32
-    episode_rewards = []
+# User definitions:
+# -----------------
+train_dqn = True
+test_dqn = False
+render = True
 
-    for e in range(no_episodes):  # Number of episodes
-        state, _, _ = env.reset()
-        print(np.shape(state))
-        state = np.array(state).reshape(1, -1)
-        total_reward = 0
+#! Define env attributes (environment specific)
+no_actions = 4
+no_states = 2
 
+# Hyperparameters:
+# ----------------
+learning_rate = 0.0001
+gamma = 0.99
+buffer_limit = 50_000
+batch_size = 64
+num_episodes = 100
+max_steps = 100
+target_update_interval = 10
+
+# Main:
+# -----
+if train_dqn:
+    env = create_env()
+
+    # Initialize the Q Net and the Q Target Net
+    q_net = Qnet(no_actions=no_actions, no_states=no_states)
+    q_target = Qnet(no_actions=no_actions, no_states=no_states)
+    q_target.load_state_dict(q_net.state_dict())
+
+    # Initialize the Replay Buffer
+    memory = ReplayBuffer(buffer_limit=buffer_limit)
+
+    print_interval = 10
+    episode_reward = 0.0
+    optimizer = optim.Adam(q_net.parameters(), lr=learning_rate)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.9)
+
+    rewards = []
+
+    for n_epi in range(num_episodes):
+        epsilon = max(0.01, 1.0 - 0.005*(n_epi/1))  # Slower epsilon decay
+        s, _, _ = env.reset()
         done = False
-        for time in range(500):
-            action = agent.act(state)
-            next_state, _, reward, done, _ = env.step(action)
-            next_state = np.array(state).reshape(1, -1)
-            total_reward += reward
-            agent.remember(state, action, reward, next_state, done)
-            state = next_state
+
+        for _ in range(max_steps):
+            s = np.array(s).reshape(1, -1)
+            a = q_net.sample_action(torch.from_numpy(s).float(), epsilon)
+            s_prime, _, r, done, _ = env.step(a)
+            done_mask = 0.0 if done else 1.0
+
+            memory.put((s, a, r, s_prime, done_mask))
+            s = s_prime
+            episode_reward += r
+
             if done:
-                print(f"episode: {
-                      e+1}/{no_episodes}, score: {time}, e: {agent.epsilon:.2}")
                 break
-            if len(agent.memory) > batch_size:
-                agent.replay(batch_size)
-        episode_rewards.append(total_reward)
-        # Save model after every episode
-        agent.save(f"dqn_model_{e}.weights.h5")
-    # Print average reward per episode
-    average_reward = np.mean(episode_rewards)
-    print(f"Average Reward per Episode: {average_reward}")
-    # Plotting the training curve
-    plt.plot(range(1, no_episodes + 1), episode_rewards, marker='o')
+
+        if memory.size() > 2000:
+            train(q_net, q_target, memory, optimizer, batch_size, gamma)
+            # Apply gradient clipping
+            torch.nn.utils.clip_grad_norm_(q_net.parameters(), max_norm=1.0)
+
+        if n_epi % target_update_interval == 0 and n_epi != 0:
+            q_target.load_state_dict(q_net.state_dict())
+            print(f"n_episode :{n_epi}, Episode reward : {
+                  episode_reward}, n_buffer : {memory.size()}, eps : {epsilon}")
+
+        rewards.append(episode_reward)
+        episode_reward = 0.0
+        scheduler.step()
+
+        # Define a stopping condition for the game:
+        if len(rewards) >= 10 and all(r == max_steps for r in rewards[-10:]):
+            break
+
+    env.close()
+    torch.save(q_net.state_dict(), "dqn.pth")
+
+    plt.plot(rewards, label='Reward per Episode')
     plt.xlabel('Episode')
-    plt.ylabel('Total Reward')
-    plt.title('Training Curve')
-    plt.grid(True)
+    plt.ylabel('Rewards')
+    plt.legend()
+    plt.savefig("training_curve.png")
     plt.show()
 
-else:  # if not train_visualize:
-    # Define the model architecture
-    model = Sequential([
-        Flatten(input_shape=(2,)),  # Input layer flattens the 11x11 grid
-        Dense(24, activation='relu'),
-        Dense(24, activation='relu'),
-        Dense(4, activation='linear')   # Output layer with 4 actions
-    ])
-
-    state = np.array([0, 0])
-
-    # Load weights into model
-    model.load_weights('./dqn_model_0.weights.h5')
-
-    def choose_action(state):
-        print(f"state: {state}")
-        q_values = model.predict(np.array([state]))[0]
-        return np.argmax(q_values)  # Choose action with highest Q-value
-
-    # Print model summary
-    print(model.summary())
-
+# Test:
+if test_dqn:
+    print("Testing the trained DQN: ")
     env = create_env()
-    done = False
-    while not done:
-        action = choose_action(state)
-        agent_state, observation, current_cumulative_reward, done, info = env.step(
-            action)
-        state = agent_state
+
+    dqn = Qnet(no_actions=no_actions, no_states=no_states)
+    dqn.load_state_dict(torch.load("dqn.pth"))
+
+    for _ in range(10):
+        s, _, _ = env.reset()
+        episode_reward = 0
+
+        for _ in range(max_steps):
+            action = dqn(torch.from_numpy(s).float())
+            s_prime, _, r, done, _ = env.step(action.argmax().item())
+            s = s_prime
+
+            episode_reward += r
+
+            if done:
+                break
+        print(f"Episode reward: {episode_reward}")
+
+    env.close()

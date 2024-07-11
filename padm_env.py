@@ -37,10 +37,10 @@ class ExtendedStateType(Enum):
     """
     Represents extended state types with additional properties like rewards, images, and special abilities.
     """
-    PATH_SANDY_1 = (StateType.PATH, [-0.1], "free-path-1.png", None)
-    PATH_SANDY_2 = (StateType.PATH, [-0.1], "free-path-2.png", None)
-    PATH_GRASSY_1 = (StateType.PATH, [-0.1], "free-path.png", None)
-    PATH_GRASSY_2 = (StateType.PATH, [-0.1], "bush-sm.png", None)
+    PATH_SANDY_1 = (StateType.PATH, [-0.01], "free-path-1.png", None)
+    PATH_SANDY_2 = (StateType.PATH, [-0.01], "free-path-2.png", None)
+    PATH_GRASSY_1 = (StateType.PATH, [-0.01], "free-path.png", None)
+    PATH_GRASSY_2 = (StateType.PATH, [-0.01], "bush-sm.png", None)
 
     OBSTACLE_FENCE = (StateType.OBSTACLE, [-0.1], "fence-1.png", None)
     OBSTACLE_SIGN_BOARD = (StateType.OBSTACLE, [-0.1], "sign-board.png", None)
@@ -59,9 +59,9 @@ class ExtendedStateType(Enum):
     HELL_STATE_SNORLAX = (StateType.HELL, [-5, -3], "snorlax-sleeping.gif",
                           SpecialAbilities.IGNORES_PROXIMITY_DAMAGE_IF_ASLEEP)
     HELL_STATE_HAUNTER = (StateType.HELL, [-7, -3, -1], "haunter.gif", None)
-    HELL_STATE_ABRA = (StateType.HELL, [-9, -4, -2], "abra.gif", None)
+    HELL_STATE_ABRA = (StateType.HELL, [-8, -4], "abra.gif", None)
     HELL_STATE_MEWTWO = (
-        StateType.HELL, [-8, -6], "mewtwo.gif", SpecialAbilities.RESET)
+        StateType.HELL, [-10, -6, -2], "mewtwo.gif", SpecialAbilities.RESET)
 
     HELPER_STATE_BIRD = (StateType.HELPER, [
                          1], "pidgeot.gif", SpecialAbilities.FLY)
@@ -166,7 +166,7 @@ class GridWorldEnv(gym.Env):
             ['', '', 'OBSTACLE_TREE_SMALL', 'OBSTACLE_TREE_SMALL', '', 'OBSTACLE_BUSH_BIG', 'OBSTACLE_TREE_BIG_TOP', '',
                 'OBSTACLE_TREE_SMALL', '', ''],
             ['', '', '', '',
-                'HELL_STATE_ABRA', '', '', 'HELPER_STATE_MASTER_BALL', '', '', 'GOAL']
+                'HELL_STATE_ABRA', '', '', '', '', 'HELPER_STATE_MASTER_BALL', 'GOAL']
         ]
 
         for i in range(grid_size):
@@ -665,7 +665,7 @@ class GridWorldEnv(gym.Env):
         """
         print(f"action1: {action}")
         print(f"curren state: {self.agent_state}")
-        agent_pos_before_transition = None
+        # agent_pos_before_transition = None
 
         if action >= 0 and action < 4:
             next_state = self.agent_state.copy()
@@ -689,7 +689,7 @@ class GridWorldEnv(gym.Env):
             raise ValueError(f"Invalid action: {action}")
 
         reward = 0
-        self.current_cumulative_reward = 0
+        self.current_cumulative_reward = 0.0
 
         done = False
         # if(np.array_equal(self.agent_state,[11,11])):
@@ -718,7 +718,7 @@ class GridWorldEnv(gym.Env):
                     if special_ability == SpecialAbilities.FLY:
                         self._reset_state_to_normal(pos[0], pos[1])
                         print("Flying to [0,10]")
-                        agent_pos_before_transition = pos
+                        # agent_pos_before_transition = pos
                         _, _ = self.transition_directly([0, 10])
                     elif special_ability == SpecialAbilities.CATCH_ANY_POKEMON:
                         # Remove the pokeball from the Grid since it is acquired.
@@ -762,7 +762,8 @@ class GridWorldEnv(gym.Env):
         observation = self._get_obs()
         info = self._get_info()
 
-        return (self.agent_state if agent_pos_before_transition is None else agent_pos_before_transition, observation, self.current_cumulative_reward, done, info)
+        print(f"self.agent_state: {self.agent_state}")
+        return (self.agent_state, observation, self.current_cumulative_reward, done, info)
 
     def render(self):
         """
