@@ -1,6 +1,7 @@
 My Gamified (Pokémon) implementation of algorithms and techniques in Autonomous systems and decision making.
 
-The game: You (as 'Ash') try to find and rescue captive Pikachu https://emojis.slackmojis.com/emojis/images/1643515323/13422/pikachu-lie.gif?1643515323 but there are characters (obstacles) who act as adversaries ☠️.
+The game: You (as 'Ash') try to find and rescue captive Pikachu ![pikachu](https://github.com/user-attachments/assets/43097443-b6a6-42c4-9a87-8e97699975b1)
+ but there are characters (obstacles) who act as adversaries ☠️.
 More score 💯 for finding him in the shorted number of steps and without taking unrewarding or harmful paths.  👏🏁
 
 note: 
